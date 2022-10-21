@@ -1,0 +1,161 @@
+Script started on 2022-10-21 18:48:52-04:00
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ history -c
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+***************************************
+(Ans 0)
+newauthor_origtweet.tsv has 2 columns : retweeting author-id and original tweet-id
+***************************************
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ grep "retweeted" downloaded_tweets_extend_nolf2.tsv | cut -f 2,5 | awk '{print $1 " " $3}' | sed 's/id=//g' > newauthor_origtweet.tsv
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+***********
+Sort the file on original tweet-id column so that it can be used in a join
+***********
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ sort -n -k2  newauthor_origtweet.tsv > newauthor_origtweet_sorted.tsv
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+***********
+Now sort the original tweets file on the tweet id column so it can be used in a join
+Only need to save the original tweet id and the original author id
+***********
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ sort -n -k1 downloaded_tweets_extend_original_nolf2.tsv | cut -f 1,2 > origtweet_origauthor_sorted.tsv
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+***********
+Now join the 2 intermediate files on the original tweet-id column.
+Result will be original-tweet-id  newauthor   orig-author
+***********
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ join -1 2 -2 1 newauthor_origtweet_sorted.tsv  origtweet_origauthor_sorted.tsv > join.out 2>/dev/null
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+******
+Eliminate rows where original author is same as retweeting author
+******
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ cat join.out | awk '{if($2 != $3) print $0}' > join-unique.out
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+*******
+Now find the top 10 original authors from the join.out file
+*******
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ cut -d " " -f 3 join-unique.out | sort -nr | uniq -c | sort -nr | head -n 10
+   1076 18831926
+    438 1891490382
+    362 163018653
+    323 1495480590572961792
+    316 1219232377605644289
+    255 1231514832479948802
+    208 42836999
+    193 380648579
+    179 80802900
+    160 720139699
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+*********************************************
+(Ans 1)
+Just get column3 and column 2 in that order from join.out to get original author, retweeting author
+*********************************************
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ cat  join-unique.out | awk '{print $3 "\t" $2}' | sort -n > ans1.tsv
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+*********************************************
+(Ans 2)
+search_file has all userid's who got 3 or more retweets. Each line is ended with Tab so that fgrep on ans1.tsv will work
+*********************************************
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ cut -f1 ans1.tsv | uniq -c | sort -nr | awk '{if ($1 > 2) print  $2 "\t"}' > search_file
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ fgrep -f search_file ans1.tsv > ans2.tsv
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+*********************************************
+(Ans 3)
+ans3.hist will have the raw data for histogram. 1st column is number of retweets. 2nd column is number of users
+gnulot for this histogram is in A4-ans3.png
+*********************************************
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ cut -f1 ans1.tsv | uniq -c | sort -nr | awk '{if ($1 > 2) print $0}' | awk '{print $1}' | uniq -c | awk '{print $2 " " $1}' | sort -n > anss3.hist
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+*********************************************
+(Ans 4)
+search_file already has interesting users - those who got retweeted 3 or more times.
+We need to find all retweets of tweets done by interesting users.
+First, get hashtags for All retweets with the original tweet's ID
+*********************************************
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ grep "retweeted" downloaded_tweets_extend_nolf2.tsv | awk -F'\t' '{if($4) print $4 "\t" $5}' | awk '{print $1 "\t" $3}' | sed 's/id=//g' >  hashtag_origtweetid.tsv
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+*****
+Then sort it on original tweet id so that it can be used for join
+*****
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ sort -n -k 2 hashtag_origtweetid.tsv > hashtag_origtweetid_sorted.tsv
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+*****
+Now join 2 files to get originaltweetID, originalauthor, hashtag
+*****
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ join -1 1 -2 2 origtweet_origauthor_sorted.tsv hashtag_origtweetid_sorted.tsv > newjoin.out 2>/dev/null
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+******
+Now use fgrep to get hashtags on retweets of tweets only from interesting users, who are in search_file
+******
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ cat newjoin.out | awk '{print $2 "\t" $3}' | grep -f search_file | cut -f 2 > hashtags
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+******
+Finally, process hashtags file to get the top 30 hashtags
+******
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ cat hashtags | tr ',' '\n' | tr -d '"' | grep -v '^$' | tr '[:upper:]' '[:lower:]' | sort | uniq -c | sort -nr | head -n 30 | awk '{print $$2}' | sort > tophashtags
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+*****************************************************
+(Ans 5)
+Pick a original author id from ans2.tsv, say 621533.
+So author 621533 was retweeted by 8 other authors
+
+For same graph for replies, we pick user 18831926 and grep in the Assignment 3 data
+So author 18831926 got replies from 9 other authors
+
+The network graphs for these are in the gephi_retweets.png and gephi_replies.png
+*****************************************************
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ grep 621533 ans2.tsv | sort -n -k2 | uniq -c | awk '{print $3 ";" $2}'
+29188599;621533
+29447428;621533
+77726331;621533
+527445533;621533
+631283641;621533
+2800413166;621533
+711608180535640064;621533
+828578052942741505;621533
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ grep 18831926 ~/A3/ans2.tsv | sort -n -k2 | uniq -c | awk '{print $3 ";" $2}'
+17261279;18831926
+19617541;18831926
+275104144;18831926
+844852386;18831926
+4917244678;18831926
+798711382044708864;18831926
+886032877011558400;18831926
+1094971056358637568;18831926
+1306347674929684482;18831926
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ 
+]0;rishabh@sjsu:~/A4[rishabh@sjsu A4]$ exit
+
+Script done on 2022-10-21 19:00:42-04:00
+
+***********************************************
+(Ans 6)
+gephi_retweets.png shows the network plot for author 621533. This author was retweeted by 8 other authors. 
+This is why graph has edges going from 8 nodes to the one node representing 621533. 
+
+gephi_replies.png shows the network plot for author 18831926. This author was replied to by 9 other authors.
+This is why graph has edges going from 9 nodes to the one node representing 18831926.
+***********************************************
